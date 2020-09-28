@@ -5,6 +5,7 @@ import os
 import sys
 import yaml
 
+from PIL import Image
 from io import BytesIO
 from mastodon import Mastodon
 from twython import Twython
@@ -48,11 +49,25 @@ def main():
 
     row = items[next_index]
 
+    row['image_url'] = row['image_url'].replace('service','master').replace('v.jpg','u.tif')
+
     status = '{}, {}'.format(row['title'], row['date']).lower()
     res = requests.get(row['image_url'])
 
+    img = Image.open(BytesIO(res.content))
+    factor = 2400/max(img.size)
+
+    new_size = (int(img.size[0] * factor), int(img.size[1] * factor))
+
+    img = img.resize(new_size)
+
+    image_io = BytesIO()
+
+    img.save(image_io, format='jpeg')
+
     if '-d' in sys.argv[1:]:
         print(status, row['image_url'])
+        img.save('test.jpg')
         sys.exit()
 
     with open(configpath) as f:
@@ -72,10 +87,14 @@ def main():
     mastodon = Mastodon(client_id=mastodonkey, client_secret=mastodonsecret,
                         access_token=mastodontoken, api_base_url='https://botsin.space')
 
-    response = twitter.upload_media(media=BytesIO(res.content))
+    image_io.seek(0)
+
+    response = twitter.upload_media(media=image_io)
     twitter.update_status(status=status, media_ids = [response['media_id']])
 
-    mast_media = mastodon.media_post(BytesIO(res.content), mime_type='image/jpeg')
+    image_io.seek(0)
+
+    mast_media = mastodon.media_post(image_io, mime_type='image/jpeg')
     mastodon.status_post(status=status, media_ids = [mast_media['id']])
 
 if __name__ == '__main__':
