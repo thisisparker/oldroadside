@@ -55,7 +55,7 @@ def main():
     res = requests.get(row['image_url'])
 
     img = Image.open(BytesIO(res.content))
-    factor = 2400/max(img.size)
+    factor = 3000/max(img.size)
 
     new_size = (int(img.size[0] * factor), int(img.size[1] * factor))
 
@@ -63,11 +63,11 @@ def main():
 
     image_io = BytesIO()
 
-    img.save(image_io, format='jpeg')
+    img.save(image_io, format='jpeg', quality=95)
 
     if '-d' in sys.argv[1:]:
         print(status, row['image_url'])
-        img.save('test.jpg')
+        img.save('test.jpg', quality=95)
         sys.exit()
 
     with open(configpath) as f:
