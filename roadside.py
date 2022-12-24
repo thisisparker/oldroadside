@@ -5,7 +5,8 @@ import os
 import sys
 import yaml
 
-from PIL import Image
+from PIL import Image as PilImage
+from wand.image import Image as WandImage
 from io import BytesIO
 from mastodon import Mastodon
 from twython import Twython
@@ -54,7 +55,12 @@ def main():
     status = '{}, {}'.format(row['title'], row['date']).lower()
     res = requests.get(row['image_url'])
 
-    img = Image.open(BytesIO(res.content))
+    wandImg = WandImage(blob=res.content)
+    wandImg.auto_gamma()
+    wandImg.white_balance()
+    wandImg.contrast_stretch(black_point=0.2, white_point=0.05)
+
+    img = PilImage.open(BytesIO(wandImg.make_blob()))
     factor = 3000/max(img.size)
 
     new_size = (int(img.size[0] * factor), int(img.size[1] * factor))
