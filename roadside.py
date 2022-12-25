@@ -2,6 +2,8 @@ import csv
 import random
 import requests
 import os
+import shlex
+import subprocess
 import sys
 import yaml
 
@@ -54,7 +56,13 @@ def main():
     status = '{}, {}'.format(row['title'], row['date']).lower()
     res = requests.get(row['image_url'])
 
-    img = Image.open(BytesIO(res.content))
+    cmd = shlex.split('convert -auto-gamma -contrast-stretch 2%x0.5% - tif:-')
+    print('running', cmd)
+    proc = subprocess.run(cmd, input=res.content, capture_output=True)
+    print(proc.stderr)
+
+    img = Image.open(BytesIO(proc.stdout))
+
     factor = 3000/max(img.size)
 
     new_size = (int(img.size[0] * factor), int(img.size[1] * factor))
