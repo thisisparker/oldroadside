@@ -7,7 +7,6 @@ import subprocess
 import sys
 import yaml
 
-from PIL import Image
 from io import BytesIO
 from mastodon import Mastodon
 from twython import Twython
@@ -56,27 +55,19 @@ def main():
     status = '{}, {}'.format(row['title'], row['date']).lower()
     res = requests.get(row['image_url'])
 
-    cmd = shlex.split('convert -auto-gamma -contrast-stretch 2%x0.5% - tif:-')
+    cmd = shlex.split('convert -auto-gamma -contrast-stretch 2%x0.5% '
+                      '-resize 3000x3000 - jpg:-')
     print('running', cmd)
     proc = subprocess.run(cmd, input=res.content, capture_output=True)
     print(proc.stderr)
 
-    img = Image.open(BytesIO(proc.stdout))
-
-    factor = 3000/max(img.size)
-
-    new_size = (int(img.size[0] * factor), int(img.size[1] * factor))
-
-    img = img.resize(new_size)
-
-    image_io = BytesIO()
-
-    img.save(image_io, format='jpeg', quality=95)
-
     if '-d' in sys.argv[1:]:
         print(status, row['image_url'])
-        img.save('test.jpg', quality=95)
+        with open('test.jpg', 'wb') as f:
+            f.write(proc.stdout)
         sys.exit()
+
+    image_io = BytesIO(proc.stdout)
 
     with open(configpath) as f:
         config = yaml.safe_load(f)
