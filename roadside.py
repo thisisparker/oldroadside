@@ -102,15 +102,23 @@ def main():
     (bsky_jwt, bsky_did) = authenticate_bluesky(config['bluesky_username'],
                                                 config['bluesky_password'])
 
-    image_io.seek(0)
+    try:
+        image_io.seek(0)
 
-    response = twitter.upload_media(media=image_io)
-    twitter.update_status(status=status, media_ids = [response['media_id']])
+        response = twitter.upload_media(media=image_io)
+        twitter.update_status(status=status, media_ids = [response['media_id']])
 
-    image_io.seek(0)
+    except:
+        print('Twitter upload failed')
 
-    mast_media = mastodon.media_post(image_io, mime_type='image/jpeg')
-    mastodon.status_post(status=status, media_ids = [mast_media['id']])
+    try:
+        image_io.seek(0)
+
+        mast_media = mastodon.media_post(image_io, mime_type='image/jpeg')
+        mastodon.status_post(status=status, media_ids = [mast_media['id']])
+
+    except:
+        print('Mastodon upload failed')
 
     image_io.seek(0)
 
