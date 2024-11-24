@@ -79,9 +79,10 @@ def main():
         mastodonkey = config['mastodon_key']
         mastodonsecret = config['mastodon_secret']
         mastodontoken = config['mastodon_token']
+        mastodonurl = config['mastodon_url']
 
         mastodon = Mastodon(client_id=mastodonkey, client_secret=mastodonsecret,
-                            access_token=mastodontoken, api_base_url='https://botsin.space')
+                            access_token=mastodontoken, api_base_url=mastodonurl)
 
         mast_media = mastodon.media_post(image_io, mime_type='image/jpeg')
         mastodon.status_post(status=status, media_ids = [mast_media['id']])
