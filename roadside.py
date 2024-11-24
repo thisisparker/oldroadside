@@ -1,3 +1,4 @@
+import atproto
 import csv
 import random
 import requests
@@ -10,9 +11,6 @@ import yaml
 from datetime import datetime, timezone
 from io import BytesIO
 from mastodon import Mastodon
-from twython import Twython
-
-BLUESKY_BASE_URL = "https://bsky.social/xrpc"
 
 def get_item_list(itemspath):
     with open(itemspath) as f:
@@ -24,16 +22,6 @@ def get_nogos_list(nogospath):
     with open(nogospath) as f:
         nogos = [int(index) for index in f.readlines()]
     return nogos
-
-def authenticate_bluesky(username, password):
-    resp = requests.post(
-        BLUESKY_BASE_URL + "/com.atproto.server.createSession",
-        json={"identifier": username, "password": password},
-    )
-    resp_data = resp.json()
-    jwt = resp_data["accessJwt"]
-    did = resp_data["did"]
-    return jwt, did
 
 def main():
     fullpath = os.path.dirname(os.path.realpath(__file__))
@@ -85,34 +73,15 @@ def main():
     with open(configpath) as f:
         config = yaml.safe_load(f)
 
-    appkey = config['app_key']
-    appsecret = config['app_secret']
-    token = config['oauth_token']
-    tokensecret = config['oauth_secret']
-
-    twitter = Twython(appkey, appsecret, token, tokensecret)
-
-    mastodonkey = config['mastodon_key']
-    mastodonsecret = config['mastodon_secret']
-    mastodontoken = config['mastodon_token']
-
-    mastodon = Mastodon(client_id=mastodonkey, client_secret=mastodonsecret,
-                        access_token=mastodontoken, api_base_url='https://botsin.space')
-
-    (bsky_jwt, bsky_did) = authenticate_bluesky(config['bluesky_username'],
-                                                config['bluesky_password'])
-
     try:
         image_io.seek(0)
 
-        response = twitter.upload_media(media=image_io)
-        twitter.update_status(status=status, media_ids = [response['media_id']])
+        mastodonkey = config['mastodon_key']
+        mastodonsecret = config['mastodon_secret']
+        mastodontoken = config['mastodon_token']
 
-    except:
-        print('Twitter upload failed')
-
-    try:
-        image_io.seek(0)
+        mastodon = Mastodon(client_id=mastodonkey, client_secret=mastodonsecret,
+                            access_token=mastodontoken, api_base_url='https://botsin.space')
 
         mast_media = mastodon.media_post(image_io, mime_type='image/jpeg')
         mastodon.status_post(status=status, media_ids = [mast_media['id']])
@@ -120,38 +89,16 @@ def main():
     except:
         print('Mastodon upload failed')
 
-    image_io.seek(0)
+    try:
+        image_io.seek(0)
 
-    headers = {"Authorization": "Bearer " + bsky_jwt}
+        bsky_client = atproto.Client()
+        bsky_client.login(config['bluesky_username'], config['bluesky_password'])
 
-    bsky_media_resp = requests.post(
-            BLUESKY_BASE_URL + "/com.atproto.repo.uploadBlob",
-            data=image_io,
-            headers={**headers, "Content-Type": "image/jpg"})
+        bsky_client.send_image(text=status, image=image_io, image_alt=status)
 
-    img_blob = bsky_media_resp.json().get("blob")
-
-    iso_timestamp = datetime.now(timezone.utc).isoformat()
-    iso_timestamp = (
-        iso_timestamp[:-6] + 'Z'
-    )
-
-    post_data = {
-        "repo": bsky_did,
-        "collection": "app.bsky.feed.post",
-        "record": {
-            "$type": "app.bsky.feed.post",
-            "text": status,
-            "createdAt": iso_timestamp,
-            "embed": {"$type": "app.bsky.embed.images", "images":
-                [{"image": img_blob,
-                  "alt":status}]},
-        }
-    }
-
-    resp = requests.post(BLUESKY_BASE_URL + "/com.atproto.repo.createRecord",
-                            json=post_data,
-                            headers=headers)
+    except:
+        print('Bluesky upload failed')
 
 if __name__ == '__main__':
     main()
