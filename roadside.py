@@ -57,7 +57,7 @@ def main():
     res = requests.get(row['image_url'])
 
     cmd = shlex.split('convert -auto-gamma -contrast-stretch 2%x0.5% '
-                      '-resize 2000x2000 - jpg:-')
+                      '-resize 1500x1500 - jpg:-')
     print('running', cmd)
     proc = subprocess.run(cmd, input=res.content, capture_output=True)
     print(proc.stderr)
