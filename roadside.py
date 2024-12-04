@@ -11,6 +11,7 @@ import yaml
 from datetime import datetime, timezone
 from io import BytesIO
 from mastodon import Mastodon
+from PIL import Image
 
 def get_item_list(itemspath):
     with open(itemspath) as f:
@@ -69,6 +70,10 @@ def main():
         sys.exit()
 
     image_io = BytesIO(proc.stdout)
+    img = Image.open(image_io)
+    img_width, img_height = img.size
+    aspect_ratio = atproto.models.AppBskyEmbedDefs.AspectRatio(
+                            width=img_width, height=img_height)
 
     with open(configpath) as f:
         config = yaml.safe_load(f)
@@ -96,7 +101,8 @@ def main():
         bsky_client = atproto.Client()
         bsky_client.login(config['bluesky_username'], config['bluesky_password'])
 
-        bsky_client.send_image(text=status, image=image_io, image_alt=status)
+        bsky_client.send_image(text=status, image=image_io, image_alt=status,
+                                image_aspect_ratio=aspect_ratio)
 
     except:
         print('Bluesky upload failed')
